@@ -47,7 +47,7 @@
 #include <cxxabi.h>
 #endif
 
-namespace cmdline{
+namespace cmdline11 {
 
 namespace detail{
 
@@ -169,7 +169,7 @@ struct range_reader{
   range_reader(const T &low, const T &high): low(low), high(high) {}
   T operator()(const std::string &s) const {
     T ret=default_reader<T>()(s);
-    if (!(ret>=low && ret<=high)) throw cmdline::cmdline_error("range_error");
+    if (!(ret>=low && ret<=high)) throw cmdline_error("range_error");
     return ret;
   }
 private:
@@ -821,4 +821,4 @@ private:
   std::vector<std::string> errors;
 };
 
-} // cmdline
+} // namespace cmdline11
