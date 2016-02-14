@@ -36,27 +36,28 @@ int main(int argc, char *argv[])
   cmdline11::parser a;
   a.add<string>("host", 'h', "host name", true, "");
   a.add<int>("port", 'p', "port number", false, 80, cmdline11::range(1, 65535));
-  a.add<string>("type", 't', "protocol type", false, "http", cmdline11::oneof<string>("http", "https", "ssh", "ftp"));
+  a.add<string>("type", 't', "protocol type", false, "http",
+                cmdline11::oneof<string>("http", "https", "ssh", "ftp"));
   a.add("help", 0, "print this message");
   a.footer("filename ...");
   a.set_program_name("test");
 
-  bool ok=a.parse(argc, argv);
+  bool ok = a.parse(argc, argv);
 
-  if (argc==1 || a.exist("help")){
-    cerr<<a.usage();
-    return 0;
-  }
-  
-  if (!ok){
-    cerr<<a.error()<<endl<<a.usage();
+  if (argc == 1 || a.exist("help")) {
+    cerr << a.usage();
     return 0;
   }
 
-  cout<<a.get<string>("host")<<":"<<a.get<int>("port")<<endl;
+  if (!ok) {
+    cerr << a.error() << endl << a.usage();
+    return 0;
+  }
 
-  for (size_t i=0; i<a.rest().size(); i++)
-    cout<<"- "<<a.rest()[i]<<endl;
+  cout << a.get<string>("host") << ":" << a.get<int>("port") << endl;
+
+  for (size_t i = 0; i < a.rest().size(); i++)
+    cout << "- " << a.rest()[i] << endl;
 
   return 0;
 }
