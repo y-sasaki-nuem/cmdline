@@ -37,6 +37,7 @@
 #include <cstring>
 #include <algorithm>
 #include <cstdlib>
+#include <memory>
 #if defined(_MSC_VER)
 #define CMDLINE_DEMANGLE_WINDOWS
 #include <windows.h>
@@ -327,16 +328,13 @@ public:
   parser(){
   }
   ~parser(){
-    for (std::map<std::string, option_base*>::iterator p=options.begin();
-         p!=options.end(); p++)
-      delete p->second;
   }
 
   void add(const std::string &name,
            char short_name=0,
            const std::string &desc=""){
     if (options.count(name)) throw cmdline_error("multiple definition: "+name);
-    options[name]=new option_without_value(name, short_name, desc);
+    options[name]=std::make_shared<option_without_value>(name, short_name, desc);
     ordered.push_back(options[name]);
   }
 
@@ -357,7 +355,7 @@ public:
            const T def=T(),
            F reader=F()){
     if (options.count(name)) throw cmdline_error("multiple definition: "+name);
-    options[name]=new option_with_value_with_reader<T, F>(name, short_name, need, def, desc, reader);
+    options[name]=std::make_shared<option_with_value_with_reader<T, F>>(name, short_name, need, def, desc, reader);
     ordered.push_back(options[name]);
   }
 
@@ -377,8 +375,8 @@ public:
   template <class T>
   const T &get(const std::string &name) const {
     if (options.count(name)==0) throw cmdline_error("there is no flag: --"+name);
-    const option_with_value<T> *p=dynamic_cast<const option_with_value<T>*>(options.find(name)->second);
-    if (p==NULL) throw cmdline_error("type mismatch flag '"+name+"'");
+    auto p = std::dynamic_pointer_cast<option_with_value<T> const>(options.find(name)->second);
+    if (!p) throw cmdline_error("type mismatch flag '"+name+"'");
     return p->get();
   }
 
@@ -450,8 +448,7 @@ public:
       prog_name=argv[0];
 
     std::map<char, std::string> lookup;
-    for (std::map<std::string, option_base*>::iterator p=options.begin();
-         p!=options.end(); p++){
+    for (auto p=options.begin(); p!=options.end(); p++){
       if (p->first.length()==0) continue;
       char initial=p->second->short_name();
       if (initial){
@@ -531,8 +528,7 @@ public:
       }
     }
 
-    for (std::map<std::string, option_base*>::iterator p=options.begin();
-         p!=options.end(); p++)
+    for (auto p=options.begin(); p!=options.end(); p++)
       if (!p->second->valid())
         errors.push_back("need option: --"+std::string(p->first));
 
@@ -811,8 +807,8 @@ private:
     F reader;
   };
 
-  std::map<std::string, option_base*> options;
-  std::vector<option_base*> ordered;
+  std::map<std::string, std::shared_ptr<option_base>> options;
+  std::vector<std::shared_ptr<option_base>> ordered;
   std::string ftr;
 
   std::string prog_name;
