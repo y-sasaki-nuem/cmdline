@@ -33,10 +33,10 @@ using namespace std;
 int main(int argc, char *argv[])
 {
   cmdline11::parser a;
-  a.add<string>("host", 'h', "host name", true, "");
-  a.add<int>("port", 'p', "port number", false, 80, cmdline11::range(1, 65535));
-  a.add<string>("type", 't', "protocol type", false, "http",
-                cmdline11::oneof<string>("http", "https", "ssh", "ftp"));
+  a.add("host", 'h', "host name", true, string(""));
+  a.add("port", 'p', "port number", false, 80, cmdline11::range(1, 65535));
+  a.add("type", 't', "protocol type", false, string("http"),
+        cmdline11::oneof<string>("http", "https", "ssh", "ftp"));
   a.add("gzip", '\0', "gzip when transfer");
 
   a.parse_check(argc, argv);
