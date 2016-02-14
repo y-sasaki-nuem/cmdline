@@ -154,7 +154,10 @@ inline std::string readable_typename<std::string>()
 
 class cmdline_error : public std::exception {
 public:
-  cmdline_error(const std::string &msg) : msg(msg) {}
+  cmdline_error(const std::string &msg)
+      : msg(msg)
+  {
+  }
   ~cmdline_error() throw() {}
   const char *what() const throw() { return msg.c_str(); }
 private:
@@ -168,7 +171,11 @@ struct default_reader {
 
 template <class T>
 struct range_reader {
-  range_reader(const T &low, const T &high) : low(low), high(high) {}
+  range_reader(const T &low, const T &high)
+      : low(low)
+      , high(high)
+  {
+  }
   T operator()(const std::string &s) const
   {
     T ret = detail::lexical_cast<T>(s);
@@ -189,7 +196,10 @@ range_reader<T> range(const T &low, const T &high)
 
 template <class T>
 struct oneof_reader {
-  oneof_reader(std::initializer_list<T> args) : alt(args) {}
+  oneof_reader(std::initializer_list<T> args)
+      : alt(args)
+  {
+  }
   T operator()(std::string const &s)
   {
     T ret = detail::lexical_cast<T>(s);
@@ -559,7 +569,10 @@ private:
     option_without_value(const std::string &name,
                          char short_name,
                          const std::string &desc)
-        : nam(name), snam(short_name), desc(desc), has(false)
+        : nam(name)
+        , snam(short_name)
+        , desc(desc)
+        , has(false)
     {
     }
     ~option_without_value() {}
@@ -603,8 +616,12 @@ private:
                       bool need,
                       const T &def,
                       const std::string &desc)
-        : nam(name), snam(short_name), need(need), has(false), def(def),
-          actual(def)
+        : nam(name)
+        , snam(short_name)
+        , need(need)
+        , has(false)
+        , def(def)
+        , actual(def)
     {
       this->desc = full_description(desc);
     }
@@ -678,8 +695,8 @@ private:
                                   const T def,
                                   const std::string &desc,
                                   F reader)
-        : option_with_value<T>(name, short_name, need, def, desc),
-          reader(reader)
+        : option_with_value<T>(name, short_name, need, def, desc)
+        , reader(reader)
     {
     }
 
