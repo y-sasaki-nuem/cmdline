@@ -551,7 +551,7 @@ public:
     check(static_cast<int>(args.size()), parse(args));
   }
 
-  void parse_check(int argc, const char *argv[]){
+  void parse_check(int argc, char const* const argv[]){
     if (!options.count("help"))
       add("help", '?', "print this message");
     check(argc, parse(argc, argv));
