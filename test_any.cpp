@@ -29,6 +29,25 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cassert>
 using namespace std;
 
+template <typename Exception, typename Expr>
+void _assert_throw(Exception, Expr expr, char const* _file, int _line)
+{
+  bool thrown = false;
+  try {
+    expr();
+  }
+  catch (Exception&) {
+    thrown = true;
+  }
+  if (!thrown) {
+    std::cerr << "Assertion failed: an exception was not thrown ("
+              << cmdline::detail::readable_typename<Exception>() << "), file " << _file
+              << ", line " << _line << std::endl;
+    std::terminate();
+  }
+}
+#define assert_throw(ex, expr) _assert_throw(ex, expr, __FILE__, __LINE__)
+
 int main(int argc, char* argv[])
 {
   cmdline::any b = string("aa");
@@ -36,4 +55,7 @@ int main(int argc, char* argv[])
   assert(b.type() == typeid(string));
   assert(b.type() != typeid(int));
   assert(b.as<string>() == "aa");
+  assert_throw(std::bad_cast{}, [&] {
+    b.as<int>();
+  });
 }

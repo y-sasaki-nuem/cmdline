@@ -121,10 +121,19 @@ Target lexical_cast(Source const& arg)
 static inline std::string demangle(std::string const& name)
 {
 #if defined(CMDLINE_DEMANGLE_WINDOWS)
-  TCHAR ret[256];
-  std::memset(ret, 0, 256);
-  ::UnDecorateSymbolName(name.c_str(), ret, 256, 0);
-  return ret;
+  TCHAR ret_[256];
+  std::memset(ret_, 0, 256);
+  ::UnDecorateSymbolName(name.c_str(), ret_, 256, 0);
+  std::string ret(ret_);
+  if (ret.substr(0, 5) == "class") {
+    return ret.substr(5 + 1);
+  }
+  else if (ret.substr(0, 6) == "struct") {
+    return ret.substr(6 + 1);
+  }
+  else {
+    return ret;
+  }
 #else
   int status = 0;
   char* p = abi::__cxa_demangle(name.c_str(), 0, 0, &status);
