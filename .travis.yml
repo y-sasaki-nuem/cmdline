@@ -1,12 +1,8 @@
-sudo:
-  - false
-
-language:
-  - cpp
-
+sudo: false
+language: cpp
 compiler:
-  - gcc
-  - clang
+  - clang++
+  - g++
 
 addons:
   apt:

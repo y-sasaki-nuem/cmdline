@@ -2,7 +2,6 @@ version: 1.0.{build}
 
 os:
   - Visual Studio 2015
-  - Windows Server 2012 R2
 
 build_script:
   - waf configure clean build --notests --check-cxx-compiler msvc --msvc_version="msvc 14.0" --msvc_targets="x64"
