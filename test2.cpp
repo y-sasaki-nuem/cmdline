@@ -31,7 +31,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iostream>
 using namespace std;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
   cmdline::parser a;
   a.add("host", 'h', "host name", true, string(""));

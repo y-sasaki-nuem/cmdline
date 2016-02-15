@@ -11,4 +11,5 @@ AlignConsecutiveAssignments             : true
 AlwaysBreakTemplateDeclarations         : true
 BinPackParameters                       : false
 BreakConstructorInitializersBeforeComma : true
+PointerAlignment                        : Left
 ...
