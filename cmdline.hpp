@@ -44,7 +44,7 @@
 #define CMDLINE_DEMANGLE_WINDOWS
 #include <windows.h>
 #pragma warning(push)
-#pragma warning(disable:4091)
+#pragma warning(disable : 4091)
 #include <dbghelp.h>
 #pragma warning(pop)
 #undef max
@@ -272,7 +272,7 @@ public:
   any& operator=(any&&) = default;
 
   std::type_info const& type() const { return obj_->type(); }
-  
+
   template <typename T>
   T const& as() const
   {
