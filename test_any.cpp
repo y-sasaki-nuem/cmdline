@@ -41,8 +41,8 @@ void _assert_throw(Exception, Expr expr, char const* _file, int _line)
   }
   if (!thrown) {
     std::cerr << "Assertion failed: an exception was not thrown ("
-              << cmdline::detail::readable_typename<Exception>() << "), file " << _file
-              << ", line " << _line << std::endl;
+              << cmdline::detail::readable_typename<Exception>() << ")"
+              << ", file " << _file << ", line " << _line << std::endl;
     std::terminate();
   }
 }
@@ -55,7 +55,5 @@ int main(int argc, char* argv[])
   assert(b.type() == typeid(string));
   assert(b.type() != typeid(int));
   assert(b.as<string>() == "aa");
-  assert_throw(std::bad_cast{}, [&] {
-    b.as<int>();
-  });
+  assert_throw(std::bad_cast{}, [&] { b.as<int>(); });
 }

@@ -236,6 +236,7 @@ class any {
     virtual ~any_base() = default;
     virtual std::type_info const& type() const = 0;
     virtual std::unique_ptr<any_base> clone() const { return nullptr; }
+    virtual std::string str() const = 0;
   };
 
   template <typename T>
@@ -252,6 +253,11 @@ class any {
     std::unique_ptr<any_base> clone() const override
     {
       return std::unique_ptr<any_base>(new any_derived<T>(val_));
+    }
+
+    std::string str() const override
+    {
+      return detail::lexical_cast<std::string>(val_);
     }
 
     T val_;
@@ -289,7 +295,14 @@ public:
       throw std::bad_cast{};
     return dynamic_cast<any_derived<T>&>(*obj_).val_;
   }
+
+  std::string str() const { return obj_->str(); }
 };
+
+std::ostream& operator<<(std::ostream& os, any const& a)
+{
+  return os << a.str();
+}
 
 //-----
 
@@ -345,16 +358,17 @@ public:
     return options.find(name)->second->has_set();
   }
 
-  template <class T>
-  const T& get(const std::string& name) const
+  any operator[](std::string const& name) const
   {
     if (options.count(name) == 0)
       throw cmdline_error("there is no flag: --" + name);
-    auto p = std::dynamic_pointer_cast<option_with_value<T> const>(
-        options.find(name)->second);
-    if (!p)
-      throw cmdline_error("type mismatch flag '" + name + "'");
-    return p->get();
+    return options.find(name)->second->get();
+  }
+
+  template <typename T>
+  T get(std::string const& name) const
+  {
+    return this->operator[](name).as<T>();
   }
 
   const std::vector<std::string>& rest() const { return others; }
@@ -635,6 +649,8 @@ private:
     virtual char short_name() const = 0;
     virtual const std::string& description() const = 0;
     virtual std::string short_description() const = 0;
+
+    virtual any get() const = 0;
   };
 
   class option_without_value : public option_base {
@@ -674,6 +690,8 @@ private:
 
     std::string short_description() const { return "--" + nam; }
 
+    any get() const { return has_set(); }
+
   private:
     std::string nam;
     char snam;
@@ -700,7 +718,7 @@ private:
     }
     ~option_with_value() {}
 
-    const T& get() const { return actual; }
+    any get() const { return actual; }
 
     bool has_value() const { return true; }
 

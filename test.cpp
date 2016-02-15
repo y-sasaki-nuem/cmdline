@@ -41,8 +41,7 @@ int main(int argc, char* argv[])
 
   a.parse_check(argc, argv);
 
-  cout << a.get<string>("type") << "://" << a.get<string>("host") << ":"
-       << a.get<int>("port") << endl;
+  cout << a["type"] << "://" << a["host"] << ":" << a["port"] << endl;
 
   if (a.exist("gzip"))
     cout << "gzip" << endl;
