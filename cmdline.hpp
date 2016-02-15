@@ -49,7 +49,7 @@
 #include <cxxabi.h>
 #endif
 
-namespace cmdline11 {
+namespace cmdline {
 
 namespace detail {
 
@@ -716,4 +716,4 @@ private:
   std::vector<std::string> errors;
 };
 
-} // namespace cmdline11
+} // namespace cmdline

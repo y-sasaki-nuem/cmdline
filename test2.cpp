@@ -26,18 +26,18 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "cmdline11.hpp"
+#include "cmdline.hpp"
 
 #include <iostream>
 using namespace std;
 
 int main(int argc, char *argv[])
 {
-  cmdline11::parser a;
+  cmdline::parser a;
   a.add("host", 'h', "host name", true, string(""));
-  a.add("port", 'p', "port number", false, 80, cmdline11::range(1, 65535));
+  a.add("port", 'p', "port number", false, 80, cmdline::range(1, 65535));
   a.add("type", 't', "protocol type", false, string("http"),
-        cmdline11::oneof<string>("http", "https", "ssh", "ftp"));
+        cmdline::oneof<string>("http", "https", "ssh", "ftp"));
   a.add("help", 0, "print this message");
   a.footer("filename ...");
   a.set_program_name("test");
