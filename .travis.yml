@@ -1,0 +1,13 @@
+sudo:
+  - false
+
+language:
+  - cpp
+
+compiler:
+  - gcc
+  - clang
+
+script:
+  - python waf configure clean build --alltests
+
