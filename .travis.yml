@@ -18,7 +18,7 @@ addons:
 install:
   - if [ "$CXX" = "g++" ];     then CXX="g++-5"       CC="gcc-5"     ; fi
   - if [ "$CXX" = "clang++" ]; then CXX="clang++-3.7" CC="clang-3.7" ; fi
-  - python waf configure clean build --check-cxx-compiler "$CXX" --notests
+  - python waf configure clean build --notests
 
 script:
   - python waf build --alltests
