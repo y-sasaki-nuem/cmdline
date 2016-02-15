@@ -43,7 +43,10 @@
 #if defined(_MSC_VER)
 #define CMDLINE_DEMANGLE_WINDOWS
 #include <windows.h>
+#pragma warning(push)
+#pragma warning(disable:4091)
 #include <dbghelp.h>
+#pragma warning(pop)
 #undef max
 #pragma comment(lib, "dbghelp.lib")
 #elif defined(__clang__) || defined(__GNUC__)
@@ -115,7 +118,7 @@ Target lexical_cast(Source const& arg)
                         detail::is_same<Target, Source>::value>::cast(arg);
 }
 
-static inline std::string demangle(std::string& name)
+static inline std::string demangle(std::string const& name)
 {
 #if defined(CMDLINE_DEMANGLE_WINDOWS)
   TCHAR ret[256];
@@ -218,6 +221,66 @@ oneof_reader<T> oneof(Args&&... args)
 {
   return oneof_reader<T>{std::forward<Args>(args)...};
 }
+
+class any {
+  struct any_base {
+    virtual ~any_base() = default;
+    virtual std::type_info const& type() const = 0;
+    virtual std::unique_ptr<any_base> clone() const { return nullptr; }
+  };
+
+  template <typename T>
+  struct any_derived : any_base {
+    any_derived(T val)
+        : val_(val)
+    {
+    }
+
+    ~any_derived() override = default;
+
+    std::type_info const& type() const override { return typeid(T); }
+
+    std::unique_ptr<any_base> clone() const override
+    {
+      return std::unique_ptr<any_base>(new any_derived<T>(val_));
+    }
+
+    T val_;
+  };
+
+  std::unique_ptr<any_base> obj_;
+
+public:
+  template <typename T>
+  any(T const& val)
+      : obj_(new any_derived<T>(val))
+  {
+  }
+
+  any(any const& src)
+      : obj_(src.obj_->clone())
+  {
+  }
+
+  any& operator=(any const& src)
+  {
+    this->obj_ = src.obj_->clone();
+    return *this;
+  }
+
+  any(any&&) = default;
+  any& operator=(any&&) = default;
+
+  std::type_info const& type() const { return obj_->type(); }
+  
+  template <typename T>
+  T const& as() const
+  {
+    if (obj_->type() != typeid(T))
+      throw std::bad_cast{};
+    return dynamic_cast<any_derived<T>&>(*obj_).val_;
+  }
+};
 
 //-----
 

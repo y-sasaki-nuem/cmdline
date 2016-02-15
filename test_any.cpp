@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009, Hideyuki Tanaka
+Copyright (c) 2016, Yusuke Sasaki
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,26 +25,15 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "cmdline11.hpp"
-
-#include <iostream>
+#include "cmdline.hpp"
+#include <cassert>
 using namespace std;
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-  auto a = cmdline11::parser{
-      {"host", 'h', "host name", true, ""},
-      {"port", 'p', "port number", false, 80, cmdline11::range(1, 65535)},
-      {"type", 't', "protocol type", false, "http",
-       cmdline11::oneof("http", "https", "ssh", "ftp")},
-      {"gzip", '\0', "gzip when transfer"},
-  };
-  a.parse_check(argc, argv);
+  cmdline::any b = string("aa");
 
-  cout << a["type"] << "://" << a["host"] << ":" << a["port"].as<int>() << endl;
-
-  if (a.exist("gzip"))
-    cout << "gzip" << endl;
-
-  return 0;
+  assert(b.type() == typeid(string));
+  assert(b.type() != typeid(int));
+  assert(b.as<string>() == "aa");
 }
