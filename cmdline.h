@@ -74,7 +74,7 @@ class lexical_cast_t<std::string, Source, false>{
 public:
   static std::string cast(const Source &arg){
     std::ostringstream ss;
-    ss<<arg;
+    ss<< std::boolalpha << arg;
     return ss.str();
   }
 };
@@ -101,7 +101,7 @@ struct is_same<T, T>{
   static const bool value = true;
 };
 
-template<typename Target, typename Source>
+template <typename Target, typename Source>
 Target lexical_cast(const Source &arg)
 {
   return lexical_cast_t<Target, Source, detail::is_same<Target, Source>::value>::cast(arg);
@@ -209,14 +209,14 @@ private:
   std::string msg;
 };
 
-template <class T>
+template <typename T>
 struct default_reader{
   T operator()(const std::string &str){
     return detail::lexical_cast<T>(str);
   }
 };
 
-template <class T>
+template <typename T>
 struct range_reader{
   range_reader(const T &low, const T &high): low(low), high(high) {}
   T operator()(const std::string &s) const {
@@ -228,13 +228,13 @@ private:
   T low, high;
 };
 
-template <class T>
+template <typename T>
 range_reader<T> range(const T &low, const T &high)
 {
   return range_reader<T>(low, high);
 }
 
-template <class T>
+template <typename T>
 struct oneof_reader{
   T operator()(const std::string &s){
     T ret=default_reader<T>()(s);
@@ -247,7 +247,7 @@ private:
   std::vector<T> alt;
 };
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1)
 {
   oneof_reader<T> ret;
@@ -255,7 +255,7 @@ oneof_reader<T> oneof(T a1)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2)
 {
   oneof_reader<T> ret;
@@ -264,7 +264,7 @@ oneof_reader<T> oneof(T a1, T a2)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2, T a3)
 {
   oneof_reader<T> ret;
@@ -274,7 +274,7 @@ oneof_reader<T> oneof(T a1, T a2, T a3)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2, T a3, T a4)
 {
   oneof_reader<T> ret;
@@ -285,7 +285,7 @@ oneof_reader<T> oneof(T a1, T a2, T a3, T a4)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5)
 {
   oneof_reader<T> ret;
@@ -297,7 +297,7 @@ oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6)
 {
   oneof_reader<T> ret;
@@ -310,7 +310,7 @@ oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6, T a7)
 {
   oneof_reader<T> ret;
@@ -324,7 +324,7 @@ oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6, T a7)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6, T a7, T a8)
 {
   oneof_reader<T> ret;
@@ -339,7 +339,7 @@ oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6, T a7, T a8)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6, T a7, T a8, T a9)
 {
   oneof_reader<T> ret;
@@ -355,7 +355,7 @@ oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6, T a7, T a8, T a9)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6, T a7, T a8, T a9, T a10)
 {
   oneof_reader<T> ret;
@@ -392,7 +392,7 @@ public:
     ordered.push_back(options[name]);
   }
 
-  template <class T>
+  template <typename T>
   void add(const std::string &name,
            char short_name=0,
            const std::string &desc="",
@@ -401,7 +401,7 @@ public:
     add(name, short_name, desc, need, def, default_reader<T>());
   }
 
-  template <class T, class F>
+  template <typename T, typename F>
   void add(const std::string &name,
            char short_name=0,
            const std::string &desc="",
@@ -426,7 +426,7 @@ public:
     return options.find(name)->second->has_set();
   }
 
-  template <class T>
+  template <typename T>
   const T &get(const std::string &name) const {
     if (options.count(name)==0) throw cmdline_error("there is no flag: --"+name);
     const option_with_value<T> *p=dynamic_cast<const option_with_value<T>*>(options.find(name)->second);
@@ -759,7 +759,7 @@ private:
     bool has;
   };
 
-  template <class T>
+  template <typename T>
   class option_with_value : public option_base {
   public:
     option_with_value(const std::string &name,
@@ -843,7 +843,7 @@ private:
     T actual;
   };
 
-  template <class T, class F>
+  template <typename T, typename F>
   class option_with_value_with_reader : public option_with_value<T> {
   public:
     option_with_value_with_reader(const std::string &name,
