@@ -37,12 +37,9 @@
 #include <cstring>
 #include <algorithm>
 #include <cstdlib>
+#include <memory>
 #if defined(_MSC_VER)
 #define CMDLINE_DEMANGLE_WINDOWS
-#include <windows.h>
-#include <dbghelp.h>
-#undef max
-#pragma comment(lib, "dbghelp.lib")
 #elif defined(__clang__) || defined(__GNUC__)
 #include <cxxabi.h>
 #endif
@@ -77,7 +74,7 @@ class lexical_cast_t<std::string, Source, false>{
 public:
   static std::string cast(const Source &arg){
     std::ostringstream ss;
-    ss<<arg;
+    ss<< std::boolalpha << arg;
     return ss.str();
   }
 };
@@ -104,38 +101,93 @@ struct is_same<T, T>{
   static const bool value = true;
 };
 
-template<typename Target, typename Source>
+template <typename Target, typename Source>
 Target lexical_cast(const Source &arg)
 {
   return lexical_cast_t<Target, Source, detail::is_same<Target, Source>::value>::cast(arg);
 }
 
-static inline std::string demangle(const std::string &name)
-{
-#if defined(CMDLINE_DEMANGLE_WINDOWS)
-  TCHAR ret[256];
-  std::memset(ret, 0, 256);
-  ::UnDecorateSymbolName(name.c_str(), ret, 256, 0);
-  return ret;
-#else
-  int status=0;
-  char *p=abi::__cxa_demangle(name.c_str(), 0, 0, &status);
-  std::string ret(p);
-  free(p);
-  return ret;
-#endif
-}
-
-template <class T>
-std::string readable_typename()
-{
-  return demangle(typeid(T).name());
-}
-
-template <class T>
+template <typename T>
 std::string default_value(T def)
 {
   return detail::lexical_cast<std::string>(def);
+}
+
+#if defined(CMDLINE_DEMANGLE_WINDOWS)
+typedef void * (__cdecl * allocation_function)(std::size_t);
+typedef void(__cdecl * free_function)(void *);
+
+extern "C" char* __unDName(
+  char* outputString,
+  const char* name,
+  int maxStringLength,    // Note, COMMA is leading following optional arguments
+  allocation_function pAlloc,
+  free_function pFree,
+  unsigned short disableFlags
+);
+
+template <typename T, typename std::enable_if<std::is_enum<T>::value, int>::type = 42>
+inline std::string msvc_demangle()
+{
+  return typeid(T).name() + 5 * sizeof(char);
+}
+
+template <typename T, typename std::enable_if<std::is_union<T>::value, int>::type = 42>
+inline std::string msvc_demangle()
+{
+  return typeid(T).name() + 6 * sizeof(char);
+}
+
+template <typename T, typename std::enable_if<std::is_class<T>::value, int>::type = 42>
+inline std::string msvc_demangle()
+{
+  //c++ has no is_struct function. So... detect in runtime
+  const char *v = typeid(T).name();
+  return v + (v[6] == ' ' ? 7 : 6) * sizeof(char);
+}
+
+template <typename T, typename std::enable_if<
+  !std::is_class<T>::value && 
+  !std::is_enum<T>::value &&
+  !std::is_union<T>::value
+, int>::type = 42>
+inline std::string msvc_demangle()
+{
+  allocation_function alloc = [](std::size_t size) {return static_cast<void*>(new char[size]); };
+  free_function free_f = [](void* p) {delete[] static_cast<char*>(p); };
+
+  std::unique_ptr<char> res{ __unDName(
+    nullptr,
+    typeid(T).name(),
+    0,
+    alloc,
+    free_f,
+    static_cast<unsigned short>(0))
+  };
+
+  return res.get();
+}
+#endif
+
+template <typename TR, typename T = std::remove_cv<std::remove_pointer<TR>::type>::type>
+inline std::string readable_typename()
+{
+#if defined(CMDLINE_DEMANGLE_WINDOWS)
+  return msvc_demangle<T>();
+#else
+  int status = 0;
+  std::unique_ptr<char, void(*)(void*)> res{
+    abi::__cxa_demangle(typeid(T).name(), NULL, NULL, &status),
+    std::free
+  };
+  return res.get();
+#endif
+}
+
+template <>
+inline std::string readable_typename<bool>()
+{
+  return "bool";
 }
 
 template <>
@@ -157,14 +209,14 @@ private:
   std::string msg;
 };
 
-template <class T>
+template <typename T>
 struct default_reader{
   T operator()(const std::string &str){
     return detail::lexical_cast<T>(str);
   }
 };
 
-template <class T>
+template <typename T>
 struct range_reader{
   range_reader(const T &low, const T &high): low(low), high(high) {}
   T operator()(const std::string &s) const {
@@ -176,13 +228,13 @@ private:
   T low, high;
 };
 
-template <class T>
+template <typename T>
 range_reader<T> range(const T &low, const T &high)
 {
   return range_reader<T>(low, high);
 }
 
-template <class T>
+template <typename T>
 struct oneof_reader{
   T operator()(const std::string &s){
     T ret=default_reader<T>()(s);
@@ -195,7 +247,7 @@ private:
   std::vector<T> alt;
 };
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1)
 {
   oneof_reader<T> ret;
@@ -203,7 +255,7 @@ oneof_reader<T> oneof(T a1)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2)
 {
   oneof_reader<T> ret;
@@ -212,7 +264,7 @@ oneof_reader<T> oneof(T a1, T a2)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2, T a3)
 {
   oneof_reader<T> ret;
@@ -222,7 +274,7 @@ oneof_reader<T> oneof(T a1, T a2, T a3)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2, T a3, T a4)
 {
   oneof_reader<T> ret;
@@ -233,7 +285,7 @@ oneof_reader<T> oneof(T a1, T a2, T a3, T a4)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5)
 {
   oneof_reader<T> ret;
@@ -245,7 +297,7 @@ oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6)
 {
   oneof_reader<T> ret;
@@ -258,7 +310,7 @@ oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6, T a7)
 {
   oneof_reader<T> ret;
@@ -272,7 +324,7 @@ oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6, T a7)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6, T a7, T a8)
 {
   oneof_reader<T> ret;
@@ -287,7 +339,7 @@ oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6, T a7, T a8)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6, T a7, T a8, T a9)
 {
   oneof_reader<T> ret;
@@ -303,7 +355,7 @@ oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6, T a7, T a8, T a9)
   return ret;
 }
 
-template <class T>
+template <typename T>
 oneof_reader<T> oneof(T a1, T a2, T a3, T a4, T a5, T a6, T a7, T a8, T a9, T a10)
 {
   oneof_reader<T> ret;
@@ -340,7 +392,7 @@ public:
     ordered.push_back(options[name]);
   }
 
-  template <class T>
+  template <typename T>
   void add(const std::string &name,
            char short_name=0,
            const std::string &desc="",
@@ -349,7 +401,7 @@ public:
     add(name, short_name, desc, need, def, default_reader<T>());
   }
 
-  template <class T, class F>
+  template <typename T, typename F>
   void add(const std::string &name,
            char short_name=0,
            const std::string &desc="",
@@ -374,7 +426,7 @@ public:
     return options.find(name)->second->has_set();
   }
 
-  template <class T>
+  template <typename T>
   const T &get(const std::string &name) const {
     if (options.count(name)==0) throw cmdline_error("there is no flag: --"+name);
     const option_with_value<T> *p=dynamic_cast<const option_with_value<T>*>(options.find(name)->second);
@@ -581,7 +633,7 @@ public:
 
     size_t max_width=0;
     for (size_t i=0; i<ordered.size(); i++){
-      max_width=std::max(max_width, ordered[i]->name().length());
+      max_width=(std::max)(max_width, ordered[i]->name().length());
     }
     for (size_t i=0; i<ordered.size(); i++){
       if (ordered[i]->short_name()){
@@ -707,7 +759,7 @@ private:
     bool has;
   };
 
-  template <class T>
+  template <typename T>
   class option_with_value : public option_base {
   public:
     option_with_value(const std::string &name,
@@ -791,7 +843,7 @@ private:
     T actual;
   };
 
-  template <class T, class F>
+  template <typename T, typename F>
   class option_with_value_with_reader : public option_with_value<T> {
   public:
     option_with_value_with_reader(const std::string &name,
