@@ -37,12 +37,9 @@
 #include <cstring>
 #include <algorithm>
 #include <cstdlib>
+#include <memory>
 #if defined(_MSC_VER)
 #define CMDLINE_DEMANGLE_WINDOWS
-#include <windows.h>
-#include <dbghelp.h>
-#undef max
-#pragma comment(lib, "dbghelp.lib")
 #elif defined(__clang__) || defined(__GNUC__)
 #include <cxxabi.h>
 #endif
@@ -110,32 +107,87 @@ Target lexical_cast(const Source &arg)
   return lexical_cast_t<Target, Source, detail::is_same<Target, Source>::value>::cast(arg);
 }
 
-static inline std::string demangle(const std::string &name)
-{
-#if defined(CMDLINE_DEMANGLE_WINDOWS)
-  TCHAR ret[256];
-  std::memset(ret, 0, 256);
-  ::UnDecorateSymbolName(name.c_str(), ret, 256, 0);
-  return ret;
-#else
-  int status=0;
-  char *p=abi::__cxa_demangle(name.c_str(), 0, 0, &status);
-  std::string ret(p);
-  free(p);
-  return ret;
-#endif
-}
-
-template <class T>
-std::string readable_typename()
-{
-  return demangle(typeid(T).name());
-}
-
-template <class T>
+template <typename T>
 std::string default_value(T def)
 {
   return detail::lexical_cast<std::string>(def);
+}
+
+#if defined(CMDLINE_DEMANGLE_WINDOWS)
+typedef void * (__cdecl * allocation_function)(std::size_t);
+typedef void(__cdecl * free_function)(void *);
+
+extern "C" char* __unDName(
+  char* outputString,
+  const char* name,
+  int maxStringLength,    // Note, COMMA is leading following optional arguments
+  allocation_function pAlloc,
+  free_function pFree,
+  unsigned short disableFlags
+);
+
+template <typename T, typename std::enable_if<std::is_enum<T>::value, int>::type = 42>
+inline std::string msvc_demangle()
+{
+  return typeid(T).name() + 5 * sizeof(char);
+}
+
+template <typename T, typename std::enable_if<std::is_union<T>::value, int>::type = 42>
+inline std::string msvc_demangle()
+{
+  return typeid(T).name() + 6 * sizeof(char);
+}
+
+template <typename T, typename std::enable_if<std::is_class<T>::value, int>::type = 42>
+inline std::string msvc_demangle()
+{
+  //c++ has no is_struct function. So... detect in runtime
+  const char *v = typeid(T).name();
+  return v + (v[6] == ' ' ? 7 : 6) * sizeof(char);
+}
+
+template <typename T, typename std::enable_if<
+  !std::is_class<T>::value && 
+  !std::is_enum<T>::value &&
+  !std::is_union<T>::value
+, int>::type = 42>
+inline std::string msvc_demangle()
+{
+  allocation_function alloc = [](std::size_t size) {return static_cast<void*>(new char[size]); };
+  free_function free_f = [](void* p) {delete[] static_cast<char*>(p); };
+
+  std::unique_ptr<char> res{ __unDName(
+    nullptr,
+    typeid(T).name(),
+    0,
+    alloc,
+    free_f,
+    static_cast<unsigned short>(0))
+  };
+
+  return res.get();
+}
+#endif
+
+template <typename TR, typename T = std::remove_cv<std::remove_pointer<TR>::type>::type>
+inline std::string readable_typename()
+{
+#if defined(CMDLINE_DEMANGLE_WINDOWS)
+  return msvc_demangle<T>();
+#else
+  int status = 0;
+  std::unique_ptr<char, void(*)(void*)> res{
+    abi::__cxa_demangle(typeid(T).name(), NULL, NULL, &status),
+    std::free
+  };
+  return res.get();
+#endif
+}
+
+template <>
+inline std::string readable_typename<bool>()
+{
+  return "bool";
 }
 
 template <>
@@ -581,7 +633,7 @@ public:
 
     size_t max_width=0;
     for (size_t i=0; i<ordered.size(); i++){
-      max_width=std::max(max_width, ordered[i]->name().length());
+      max_width=(std::max)(max_width, ordered[i]->name().length());
     }
     for (size_t i=0; i<ordered.size(); i++){
       if (ordered[i]->short_name()){
